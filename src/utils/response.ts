@@ -20,6 +20,29 @@ export const sendSuccess = <T>(
     return res.status(statusCode).json(body);
 };
 
+export const sendCreated = <T>(
+    res: Response,
+    data: T,
+    message = 'Created successfully',
+): Response => res.status(201).json({ success: true, data, message });
+
+export const sendPaginated = <T>(
+    res: Response,
+    data: T[],
+    page: number,
+    limit: number,
+    total: number,
+    message = 'Success',
+): Response => {
+    const totalPages = Math.ceil(total / limit);
+    return res.status(200).json({
+        success: true,
+        data,
+        message,
+        pagination: { page, limit, total, totalPages },
+    });
+};
+
 export const sendError = (
     res: Response,
     statusCode: number,
