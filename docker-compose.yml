@@ -1,0 +1,62 @@
+version: '3.9'
+
+services:
+  api:
+    build:
+      context: .
+      network: host
+    ports:
+      - '5000:5000'
+    env_file:
+      - .env.local
+    environment:
+      - NODE_ENV=production
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=astu_complaints
+      - DB_USER=postgres
+      - DB_SSL=false
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    volumes:
+      - uploads_data:/app/uploads
+      - logs_data:/app/logs
+
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: astu_complaints
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    ports:
+      - '5434:5432'
+    healthcheck:
+      test: [ 'CMD-SHELL', 'pg_isready -U postgres' ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis_data:/data
+    ports:
+      - '6380:6379'
+    healthcheck:
+      test: [ 'CMD', 'redis-cli', 'ping' ]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  pg_data:
+  redis_data:
+  uploads_data:
+  logs_data:
