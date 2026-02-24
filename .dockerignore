@@ -1,0 +1,11 @@
+node_modules
+dist
+.git
+.env
+.env.*
+!.env.example
+*.log
+coverage
+tests
+.DS_Store
+ASTU_Complaint_API_Postman_Collection.json
