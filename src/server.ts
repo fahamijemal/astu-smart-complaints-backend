@@ -2,7 +2,9 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import swaggerUi from 'swagger-ui-express';
 import { env } from './config/env';
+import { swaggerSpec } from './config/swagger';
 
 const app: express.Express = express();
 
@@ -33,6 +35,9 @@ app.get('/api/v1/health', (_req, res) => {
         },
     });
 });
+
+// ─── API Documentation ────────────────────────────────────────────────────────
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // ─── Start server ──────────────────────────────────────────────────────────────
 async function bootstrap() {
