@@ -39,6 +39,10 @@ app.get('/api/v1/health', (_req, res) => {
 // ─── API Documentation ────────────────────────────────────────────────────────
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
+// ─── API Routes ────────────────────────────────────────────────────────────────
+import mainRouter from './modules/index';
+app.use('/api/v1', mainRouter);
+
 // ─── Start server ──────────────────────────────────────────────────────────────
 async function bootstrap() {
     try {

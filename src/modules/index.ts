@@ -8,7 +8,7 @@ import adminRoutes from './admin/admin.routes';
 import { AdminController } from './admin/admin.controller';
 import { authenticate } from '../middleware/auth.middleware';
 
-const router = Router();
+const router: Router = Router();
 
 // Feature routes
 router.use('/auth', authRoutes);

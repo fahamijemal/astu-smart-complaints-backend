@@ -2,24 +2,24 @@ import { db } from '../../config/database';
 import { JwtPayload, ComplaintStatus } from '../../types';
 
 export const AnalyticsService = {
-    async getDashboardStats(user: JwtPayload) {
-        const params: unknown[] = [];
-        let where = '';
+  async getDashboardStats(user: JwtPayload) {
+    const params: unknown[] = [];
+    let where = '';
 
-        if (user.role === 'student') {
-            params.push(user.userId);
-            where = `WHERE submitted_by = $1`;
-        } else if (user.role === 'staff') {
-            const deptResult = await db.query(`SELECT department_id FROM users WHERE id = $1`, [user.userId]);
-            if (deptResult.rows[0]?.department_id) {
-                params.push(deptResult.rows[0].department_id);
-                where = `WHERE department_id = $1`;
-            } else {
-                where = `WHERE 1=0`; // safety fallback
-            }
-        }
+    if (user.role === 'student') {
+      params.push(user.userId);
+      where = `WHERE submitted_by = $1`;
+    } else if (user.role === 'staff') {
+      const deptResult = await db.query(`SELECT department_id FROM users WHERE id = $1`, [user.userId]);
+      if (deptResult.rows[0]?.department_id) {
+        params.push(deptResult.rows[0].department_id);
+        where = `WHERE department_id = $1`;
+      } else {
+        where = `WHERE 1=0`; // safety fallback
+      }
+    }
 
-        const statsResult = await db.query(`
+    const statsResult = await db.query(`
       SELECT 
         COUNT(*) as total,
         COUNT(*) FILTER (WHERE status = 'open') as open,
@@ -31,21 +31,21 @@ export const AnalyticsService = {
       ${where}
     `, params);
 
-        return {
-            total: parseInt(statsResult.rows[0].total, 10),
-            byStatus: {
-                open: parseInt(statsResult.rows[0].open, 10),
-                in_progress: parseInt(statsResult.rows[0].in_progress, 10),
-                resolved: parseInt(statsResult.rows[0].resolved, 10),
-                closed: parseInt(statsResult.rows[0].closed, 10),
-                reopened: parseInt(statsResult.rows[0].reopened, 10),
-            }
-        };
-    },
+    return {
+      total: parseInt(statsResult.rows[0].total as string, 10),
+      byStatus: {
+        open: parseInt(statsResult.rows[0].open as string, 10),
+        in_progress: parseInt(statsResult.rows[0].in_progress as string, 10),
+        resolved: parseInt(statsResult.rows[0].resolved as string, 10),
+        closed: parseInt(statsResult.rows[0].closed as string, 10),
+        reopened: parseInt(statsResult.rows[0].reopened as string, 10),
+      }
+    };
+  },
 
-    async getSystemReport() {
-        // Admin only - global overview by department
-        const result = await db.query(`
+  async getSystemReport() {
+    // Admin only - global overview by department
+    const result = await db.query(`
       SELECT 
         d.name as department,
         COUNT(c.id) as total_complaints,
@@ -61,6 +61,6 @@ export const AnalyticsService = {
       ORDER BY total_complaints DESC
     `);
 
-        return result.rows;
-    }
+    return result.rows;
+  }
 };

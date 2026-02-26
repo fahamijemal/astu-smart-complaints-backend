@@ -19,13 +19,13 @@ export const ComplaintController = {
     },
 
     async getById(req: AuthRequest, res: Response) {
-        const complaint = await ComplaintService.findById(req.params.id, req.user!.userId, req.user!.role);
+        const complaint = await ComplaintService.findById(req.params.id as string, req.user!.userId, req.user!.role);
         return sendSuccess(res, complaint);
     },
 
     async updateStatus(req: AuthRequest, res: Response) {
         const complaint = await ComplaintService.updateStatus(
-            req.params.id,
+            req.params.id as string,
             req.body.status,
             req.user!,
             req.body.note,
@@ -35,7 +35,7 @@ export const ComplaintController = {
 
     async addRemark(req: AuthRequest, res: Response) {
         const remark = await ComplaintService.addRemark(
-            req.params.id,
+            req.params.id as string,
             req.user!.userId,
             req.user!.role,
             req.body.content,
@@ -44,12 +44,12 @@ export const ComplaintController = {
     },
 
     async getHistory(req: AuthRequest, res: Response) {
-        const history = await ComplaintService.getHistory(req.params.id, req.user!.userId, req.user!.role);
+        const history = await ComplaintService.getHistory(req.params.id as string, req.user!.userId, req.user!.role);
         return sendSuccess(res, history);
     },
 
     async delete(req: AuthRequest, res: Response) {
-        await ComplaintService.deleteComplaint(req.params.id);
+        await ComplaintService.deleteComplaint(req.params.id as string);
         return sendSuccess(res, null, 'Complaint deleted');
     },
 };

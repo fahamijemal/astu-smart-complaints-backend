@@ -5,7 +5,7 @@ describe('AppError', () => {
         const error = new AppError('Test error', 400, 'TEST_ERROR');
         expect(error.message).toBe('Test error');
         expect(error.statusCode).toBe(400);
-        expect(error.errorCode).toBe('TEST_ERROR');
+        expect(error.code).toBe('TEST_ERROR');
         expect(error.isOperational).toBe(true);
     });
 

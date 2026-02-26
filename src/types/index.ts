@@ -9,6 +9,21 @@ export interface JwtPayload {
     email: string;
 }
 
+export interface User {
+    id: string;
+    full_name: string;
+    university_id: string;
+    email: string;
+    password_hash: string;
+    role: UserRole;
+    department_id: string | null;
+    is_active: boolean;
+    failed_logins: number;
+    locked_until: Date | null;
+    created_at: Date;
+    last_login: Date | null;
+}
+
 export interface AuthRequest extends Request {
     user?: JwtPayload;
 }
