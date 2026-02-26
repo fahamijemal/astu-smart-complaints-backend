@@ -37,6 +37,8 @@ app.get('/api/v1/health', (_req, res) => {
 });
 
 // ─── API Documentation ────────────────────────────────────────────────────────
+// Redirect root to docs for easy testing
+app.get('/', (req, res) => res.redirect('/api-docs'));
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // ─── API Routes ────────────────────────────────────────────────────────────────
