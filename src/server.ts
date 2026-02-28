@@ -4,13 +4,11 @@ import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
 import morgan from 'morgan';
-import path from 'path';
 import swaggerUi from 'swagger-ui-express';
-import yaml from 'js-yaml';
-import fs from 'fs';
 
 import { env } from './config/env';
 import { db } from './config/database';
+import { swaggerSpec } from './config/swagger';
 import { logger } from './utils/logger';
 import { generalRateLimit } from './middleware/rateLimit.middleware';
 import { errorHandler, notFound } from './middleware/error.middleware';
@@ -61,11 +59,11 @@ if (env.isProd) app.set('trust proxy', 1);
 app.use('/api/', generalRateLimit);
 
 // ─── Swagger docs ──────────────────────────────────────────────────────────────
-const swaggerPath = path.join(__dirname, 'docs', 'swagger.yaml');
-if (fs.existsSync(swaggerPath)) {
-    const swaggerDoc = yaml.load(fs.readFileSync(swaggerPath, 'utf8')) as object;
-    app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerDoc));
-}
+app.get('/api/docs.json', (_req, res) => {
+    res.setHeader('Content-Type', 'application/json');
+    res.send(swaggerSpec);
+});
+app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // ─── Health check ──────────────────────────────────────────────────────────────
 app.get('/api/v1/health', async (_req, res) => {
