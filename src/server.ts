@@ -63,7 +63,21 @@ app.get('/api/docs.json', (_req, res) => {
     res.setHeader('Content-Type', 'application/json');
     res.send(swaggerSpec);
 });
-app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+app.use(
+    '/api/docs',
+    helmet({
+        contentSecurityPolicy: {
+            directives: {
+                defaultSrc: ["'self'"],
+                imgSrc: ["'self'", 'data:'],
+                styleSrc: ["'self'", "'unsafe-inline'"],
+                scriptSrc: ["'self'", "'unsafe-inline'"],
+            },
+        },
+    }),
+    swaggerUi.serve,
+    swaggerUi.setup(swaggerSpec),
+);
 
 // ─── Health check ──────────────────────────────────────────────────────────────
 app.get('/api/v1/health', async (_req, res) => {

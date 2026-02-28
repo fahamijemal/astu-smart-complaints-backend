@@ -1,20 +1,28 @@
 import swaggerJsdoc from 'swagger-jsdoc';
 
+const apiBasePath = '/api/v1';
+const publicApiUrl = process.env.PUBLIC_API_URL?.replace(/\/$/, '');
+
 const options: swaggerJsdoc.Options = {
     definition: {
         openapi: '3.0.0',
         info: {
             title: 'ASTU Complaint & Issue Tracking System API',
             version: '1.0.0',
-            description: 'REST API for managing campus complaints, user authentication, notifications, and AI-assisted triage at Adama Science and Technology University.',
+            description: 'REST API for managing campus complaints, user authentication, notifications, and AI-assisted triage at Adama Science and Technology University. For full cURL test examples of every endpoint, see docs/api-test-examples.md in the repository.',
             contact: {
                 name: 'ASTU IT Department',
                 email: 'it@astu.edu.et',
             },
         },
-        servers: [
-            { url: '/api/v1', description: 'Versioned API base path' },
-        ],
+        servers: publicApiUrl
+            ? [
+                { url: `${publicApiUrl}${apiBasePath}`, description: 'Public deployment URL' },
+                { url: apiBasePath, description: 'Relative API base path' },
+            ]
+            : [
+                { url: apiBasePath, description: 'Relative API base path' },
+            ],
         components: {
             securitySchemes: {
                 bearerAuth: {
@@ -28,40 +36,40 @@ const options: swaggerJsdoc.Options = {
                     type: 'object',
                     properties: {
                         success: { type: 'boolean', example: false },
-                        error: { type: 'string' },
-                        message: { type: 'string' },
+                        error: { type: 'string', example: 'VALIDATION_ERROR' },
+                        message: { type: 'string', example: 'Invalid request payload' },
                     },
                 },
                 SuccessResponse: {
                     type: 'object',
                     properties: {
                         success: { type: 'boolean', example: true },
-                        message: { type: 'string', nullable: true },
+                        message: { type: 'string', nullable: true, example: 'Operation successful' },
                         data: { type: 'object', nullable: true },
                     },
                 },
                 User: {
                     type: 'object',
                     properties: {
-                        id: { type: 'string', format: 'uuid' },
-                        full_name: { type: 'string' },
-                        email: { type: 'string', format: 'email' },
-                        role: { type: 'string', enum: ['student', 'staff', 'admin'] },
-                        department_id: { type: 'string', format: 'uuid', nullable: true },
+                        id: { type: 'string', format: 'uuid', example: '2c95e9e4-85f9-4f1e-a2df-66cc3ce74231' },
+                        full_name: { type: 'string', example: 'Abebe Kebede' },
+                        email: { type: 'string', format: 'email', example: 'abebe@astu.edu.et' },
+                        role: { type: 'string', enum: ['student', 'staff', 'admin'], example: 'student' },
+                        department_id: { type: 'string', format: 'uuid', nullable: true, example: 'd5a39e6e-38d6-4b83-95df-2f28a69d2b80' },
                     },
                 },
                 Complaint: {
                     type: 'object',
                     properties: {
-                        id: { type: 'string', format: 'uuid' },
-                        ticket_number: { type: 'string' },
-                        title: { type: 'string' },
-                        description: { type: 'string' },
-                        status: { type: 'string', enum: ['open', 'in_progress', 'resolved', 'closed', 'reopened'] },
-                        category_id: { type: 'string', format: 'uuid' },
-                        submitted_by: { type: 'string', format: 'uuid' },
-                        department_id: { type: 'string', format: 'uuid' },
-                        created_at: { type: 'string', format: 'date-time' },
+                        id: { type: 'string', format: 'uuid', example: '6e514645-ec8f-4a89-a91c-1ee4f53c0a50' },
+                        ticket_number: { type: 'string', example: 'ASTU-2026-000124' },
+                        title: { type: 'string', example: 'Water leakage in dormitory block C' },
+                        description: { type: 'string', example: 'There is continuous water leakage near room C-214 causing unsafe floor conditions.' },
+                        status: { type: 'string', enum: ['open', 'in_progress', 'resolved', 'closed', 'reopened'], example: 'open' },
+                        category_id: { type: 'string', format: 'uuid', example: 'c6f8f17c-619b-4f31-8b09-c8bf3864f83e' },
+                        submitted_by: { type: 'string', format: 'uuid', example: '2c95e9e4-85f9-4f1e-a2df-66cc3ce74231' },
+                        department_id: { type: 'string', format: 'uuid', example: 'd5a39e6e-38d6-4b83-95df-2f28a69d2b80' },
+                        created_at: { type: 'string', format: 'date-time', example: '2026-02-28T10:15:00.000Z' },
                     },
                 },
             },
@@ -103,11 +111,11 @@ const options: swaggerJsdoc.Options = {
                                     type: 'object',
                                     required: ['full_name', 'university_id', 'email', 'password'],
                                     properties: {
-                                        full_name: { type: 'string' },
-                                        university_id: { type: 'string' },
-                                        email: { type: 'string', format: 'email' },
-                                        password: { type: 'string', minLength: 8 },
-                                        department_id: { type: 'string', format: 'uuid', nullable: true },
+                                        full_name: { type: 'string', example: 'Abebe Kebede' },
+                                        university_id: { type: 'string', example: 'UGR/12345/15' },
+                                        email: { type: 'string', format: 'email', example: 'abebe@astu.edu.et' },
+                                        password: { type: 'string', minLength: 8, example: 'StrongPass1' },
+                                        department_id: { type: 'string', format: 'uuid', nullable: true, example: 'd5a39e6e-38d6-4b83-95df-2f28a69d2b80' },
                                     },
                                 },
                             },
@@ -129,8 +137,8 @@ const options: swaggerJsdoc.Options = {
                                     type: 'object',
                                     required: ['email', 'password'],
                                     properties: {
-                                        email: { type: 'string', format: 'email' },
-                                        password: { type: 'string' },
+                                        email: { type: 'string', format: 'email', example: 'abebe@astu.edu.et' },
+                                        password: { type: 'string', example: 'StrongPass1' },
                                     },
                                 },
                             },
@@ -152,7 +160,7 @@ const options: swaggerJsdoc.Options = {
                                     type: 'object',
                                     required: ['refresh_token'],
                                     properties: {
-                                        refresh_token: { type: 'string' },
+                                        refresh_token: { type: 'string', example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.example.refresh.token' },
                                     },
                                 },
                             },
@@ -173,7 +181,7 @@ const options: swaggerJsdoc.Options = {
                                     type: 'object',
                                     required: ['refresh_token'],
                                     properties: {
-                                        refresh_token: { type: 'string' },
+                                        refresh_token: { type: 'string', example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.example.refresh.token' },
                                     },
                                 },
                             },
@@ -201,8 +209,8 @@ const options: swaggerJsdoc.Options = {
                                     type: 'object',
                                     required: ['current_password', 'new_password'],
                                     properties: {
-                                        current_password: { type: 'string' },
-                                        new_password: { type: 'string', minLength: 8 },
+                                        current_password: { type: 'string', example: 'StrongPass1' },
+                                        new_password: { type: 'string', minLength: 8, example: 'NewStrongPass2' },
                                     },
                                 },
                             },
@@ -217,12 +225,12 @@ const options: swaggerJsdoc.Options = {
                     summary: 'List complaints with filtering and pagination',
                     parameters: [
                         { name: 'page', in: 'query', schema: { type: 'integer' } },
-                        { name: 'limit', in: 'query', schema: { type: 'integer' } },
+                        { name: 'limit', in: 'query', schema: { type: 'integer', example: 20 } },
                         { name: 'status', in: 'query', schema: { type: 'string', enum: ['open', 'in_progress', 'resolved', 'closed', 'reopened'] } },
                         { name: 'category_id', in: 'query', schema: { type: 'string', format: 'uuid' } },
                         { name: 'department_id', in: 'query', schema: { type: 'string', format: 'uuid' } },
-                        { name: 'from', in: 'query', schema: { type: 'string' } },
-                        { name: 'to', in: 'query', schema: { type: 'string' } },
+                        { name: 'from', in: 'query', schema: { type: 'string', example: '2026-01-01' } },
+                        { name: 'to', in: 'query', schema: { type: 'string', example: '2026-12-31' } },
                         { name: 'sort', in: 'query', schema: { type: 'string', enum: ['created_at', 'updated_at', 'status'] } },
                         { name: 'order', in: 'query', schema: { type: 'string', enum: ['ASC', 'DESC'] } },
                     ],
@@ -239,10 +247,10 @@ const options: swaggerJsdoc.Options = {
                                     type: 'object',
                                     required: ['title', 'description', 'category_id'],
                                     properties: {
-                                        title: { type: 'string' },
-                                        description: { type: 'string' },
-                                        category_id: { type: 'string', format: 'uuid' },
-                                        location: { type: 'string' },
+                                        title: { type: 'string', example: 'Water leakage in dormitory block C' },
+                                        description: { type: 'string', example: 'Leakage near room C-214 has persisted for two days and needs urgent fix.' },
+                                        category_id: { type: 'string', format: 'uuid', example: 'c6f8f17c-619b-4f31-8b09-c8bf3864f83e' },
+                                        location: { type: 'string', example: 'Dormitory Block C, second floor' },
                                         attachments: { type: 'array', items: { type: 'string', format: 'binary' } },
                                     },
                                 },
@@ -287,8 +295,8 @@ const options: swaggerJsdoc.Options = {
                                     type: 'object',
                                     required: ['status'],
                                     properties: {
-                                        status: { type: 'string', enum: ['in_progress', 'resolved', 'closed', 'reopened'] },
-                                        note: { type: 'string', maxLength: 500 },
+                                        status: { type: 'string', enum: ['in_progress', 'resolved', 'closed', 'reopened'], example: 'in_progress' },
+                                        note: { type: 'string', maxLength: 500, example: 'Maintenance team assigned and parts ordered.' },
                                     },
                                 },
                             },
@@ -310,7 +318,7 @@ const options: swaggerJsdoc.Options = {
                                     type: 'object',
                                     required: ['content'],
                                     properties: {
-                                        content: { type: 'string', minLength: 1, maxLength: 2000 },
+                                        content: { type: 'string', minLength: 1, maxLength: 2000, example: 'Technician visited site and started repair.' },
                                     },
                                 },
                             },
@@ -353,8 +361,8 @@ const options: swaggerJsdoc.Options = {
                     tags: ['Analytics'],
                     summary: 'Get complaints time series (admin only)',
                     parameters: [
-                        { name: 'period', in: 'query', schema: { type: 'string', enum: ['daily', 'weekly', 'monthly'] } },
-                        { name: 'days', in: 'query', schema: { type: 'integer', minimum: 1 } },
+                        { name: 'period', in: 'query', schema: { type: 'string', enum: ['daily', 'weekly', 'monthly'], example: 'daily' } },
+                        { name: 'days', in: 'query', schema: { type: 'integer', minimum: 1, example: 30 } },
                     ],
                     responses: { '200': { description: 'Time series data' } },
                 },
@@ -371,8 +379,15 @@ const options: swaggerJsdoc.Options = {
                                     type: 'object',
                                     required: ['message'],
                                     properties: {
-                                        message: { type: 'string' },
-                                        history: { type: 'array', items: { type: 'object' } },
+                                        message: { type: 'string', example: 'How can I submit a complaint about internet outage?' },
+                                        history: {
+                                            type: 'array',
+                                            items: { type: 'object' },
+                                            example: [
+                                                { role: 'user', content: 'Hello' },
+                                                { role: 'assistant', content: 'Hi! How can I help you today?' },
+                                            ],
+                                        },
                                     },
                                 },
                             },
@@ -397,11 +412,11 @@ const options: swaggerJsdoc.Options = {
                                 schema: {
                                     type: 'object',
                                     properties: {
-                                        full_name: { type: 'string' },
-                                        email: { type: 'string', format: 'email' },
-                                        university_id: { type: 'string' },
-                                        password: { type: 'string' },
-                                        department_id: { type: 'string', format: 'uuid', nullable: true },
+                                        full_name: { type: 'string', example: 'Getachew Tadesse' },
+                                        email: { type: 'string', format: 'email', example: 'getachew.staff@astu.edu.et' },
+                                        university_id: { type: 'string', example: 'STAFF/2026/002' },
+                                        password: { type: 'string', example: 'StrongPass1' },
+                                        department_id: { type: 'string', format: 'uuid', nullable: true, example: 'd5a39e6e-38d6-4b83-95df-2f28a69d2b80' },
                                     },
                                 },
                             },
@@ -423,7 +438,7 @@ const options: swaggerJsdoc.Options = {
                                     type: 'object',
                                     required: ['role'],
                                     properties: {
-                                        role: { type: 'string', enum: ['student', 'staff', 'admin'] },
+                                        role: { type: 'string', enum: ['student', 'staff', 'admin'], example: 'staff' },
                                     },
                                 },
                             },
@@ -457,9 +472,9 @@ const options: swaggerJsdoc.Options = {
                                     type: 'object',
                                     required: ['name', 'department_id'],
                                     properties: {
-                                        name: { type: 'string' },
-                                        description: { type: 'string', nullable: true },
-                                        department_id: { type: 'string', format: 'uuid' },
+                                        name: { type: 'string', example: 'Water and Sanitation' },
+                                        description: { type: 'string', nullable: true, example: 'Handles water supply and sanitation issues in campus buildings.' },
+                                        department_id: { type: 'string', format: 'uuid', example: 'd5a39e6e-38d6-4b83-95df-2f28a69d2b80' },
                                     },
                                 },
                             },
@@ -480,9 +495,9 @@ const options: swaggerJsdoc.Options = {
                                 schema: {
                                     type: 'object',
                                     properties: {
-                                        name: { type: 'string' },
-                                        description: { type: 'string', nullable: true },
-                                        department_id: { type: 'string', format: 'uuid' },
+                                        name: { type: 'string', example: 'Water and Utilities' },
+                                        description: { type: 'string', nullable: true, example: 'Updated category name for utility issues.' },
+                                        department_id: { type: 'string', format: 'uuid', example: 'd5a39e6e-38d6-4b83-95df-2f28a69d2b80' },
                                     },
                                 },
                             },
