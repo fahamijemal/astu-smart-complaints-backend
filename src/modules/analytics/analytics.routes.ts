@@ -4,13 +4,7 @@ import { authorize } from '../../middleware/rbac.middleware';
 import { AnalyticsController } from './analytics.controller';
 
 const router: Router = Router();
-
-router.use(authenticate);
-
-// Everyone gets their dashboard stats
-router.get('/dashboard', AnalyticsController.getDashboardStats);
-
-// Only admins can pull the global system report
-router.get('/report', authorize('admin'), AnalyticsController.getReport);
-
+router.use(authenticate, authorize('admin', 'staff'));
+router.get('/summary', AnalyticsController.summary);
+router.get('/timeseries', authorize('admin'), AnalyticsController.timeSeries);
 export default router;

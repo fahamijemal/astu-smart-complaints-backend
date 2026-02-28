@@ -12,10 +12,12 @@ export function errorHandler(err: Error, req: Request, res: Response, _next: Nex
         ip: req.ip,
     });
 
+    // AppError — known operational errors with status codes
     if (err instanceof AppError) {
         return sendError(res, err.statusCode, err.code, err.message);
     }
 
+    // Multer errors
     if (err.message?.includes('File type not allowed') || err.message?.includes('Only jpeg')) {
         return sendError(res, 400, 'FILE_TYPE_NOT_ALLOWED', err.message);
     }
@@ -24,6 +26,7 @@ export function errorHandler(err: Error, req: Request, res: Response, _next: Nex
         return sendError(res, 400, 'FILE_TOO_LARGE', 'File exceeds the 5MB size limit');
     }
 
+    // PostgreSQL constraint errors
     if ((err as NodeJS.ErrnoException).code === '23505') {
         return sendError(res, 409, 'CONFLICT', 'A resource with that identifier already exists');
     }
@@ -38,3 +41,4 @@ export function errorHandler(err: Error, req: Request, res: Response, _next: Nex
 export function notFound(req: Request, res: Response) {
     return sendError(res, 404, 'NOT_FOUND', `Route ${req.method} ${req.path} not found`);
 }
+

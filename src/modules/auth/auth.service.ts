@@ -34,7 +34,10 @@ export const AuthService = {
     `, [data.full_name, data.university_id, data.email, password_hash, data.department_id ?? null]);
 
         const user = result.rows[0];
+
+        // Send welcome email async
         EmailService.sendComplaintReceived(user.email, user.full_name, 'Welcome', 'Account Created').catch(() => { });
+
         return user;
     },
 
@@ -44,11 +47,18 @@ export const AuthService = {
       FROM users WHERE email = $1
     `, [email]);
 
+        // Generic error to prevent user enumeration
         const invalidMsg = 'Invalid email or password';
-        if (result.rows.length === 0) throw AppError.unauthorized(invalidMsg, 'INVALID_CREDENTIALS');
+
+        if (result.rows.length === 0) {
+            throw AppError.unauthorized(invalidMsg, 'INVALID_CREDENTIALS');
+        }
 
         const user = result.rows[0];
-        if (!user.is_active) throw AppError.forbidden('Account has been deactivated', 'ACCOUNT_DISABLED');
+
+        if (!user.is_active) {
+            throw AppError.forbidden('Account has been deactivated', 'ACCOUNT_DISABLED');
+        }
 
         if (user.locked_until && new Date(user.locked_until) > new Date()) {
             const minutesLeft = Math.ceil((new Date(user.locked_until).getTime() - Date.now()) / 60000);
@@ -58,30 +68,56 @@ export const AuthService = {
         const passwordMatch = await bcrypt.compare(password, user.password_hash);
         if (!passwordMatch) {
             const newFailed = user.failed_logins + 1;
-            const lockUntil = newFailed >= MAX_FAILED_LOGINS ? new Date(Date.now() + LOCKOUT_MINUTES * 60 * 1000) : null;
-            await db.query(`UPDATE users SET failed_logins = $1, locked_until = $2 WHERE id = $3`, [newFailed, lockUntil, user.id]);
+            const lockUntil = newFailed >= MAX_FAILED_LOGINS
+                ? new Date(Date.now() + LOCKOUT_MINUTES * 60 * 1000)
+                : null;
+
+            await db.query(
+                `UPDATE users SET failed_logins = $1, locked_until = $2 WHERE id = $3`,
+                [newFailed, lockUntil, user.id],
+            );
+
             throw AppError.unauthorized(invalidMsg, 'INVALID_CREDENTIALS');
         }
 
+        // Reset failed logins
         await db.query(`UPDATE users SET failed_logins = 0, locked_until = NULL, last_login = NOW() WHERE id = $1`, [user.id]);
 
         const payload = { userId: user.id, role: user.role, email: user.email };
         const accessToken = TokenService.generateAccessToken(payload);
         const refreshToken = TokenService.generateRefreshToken(payload);
 
-        return { accessToken, refreshToken, user: { id: user.id, full_name: user.full_name, email: user.email, role: user.role, department_id: user.department_id } };
+        return {
+            accessToken,
+            refreshToken,
+            user: {
+                id: user.id,
+                full_name: user.full_name,
+                email: user.email,
+                role: user.role,
+                department_id: user.department_id,
+            },
+        };
     },
 
     async refreshToken(token: string) {
         const isDenylisted = await TokenService.isTokenDenylisted(token);
-        if (isDenylisted) throw AppError.unauthorized('Token has been revoked', 'TOKEN_REVOKED');
+        if (isDenylisted) {
+            throw AppError.unauthorized('Token has been revoked', 'TOKEN_REVOKED');
+        }
 
         const payload = TokenService.verifyRefreshToken(token);
+
+        // Rotate: denylist old token, issue new pair
         const exp = (payload as unknown as { exp?: number }).exp
             ? new Date((payload as unknown as { exp?: number }).exp! * 1000)
             : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
         await TokenService.denylistToken(token, exp);
-        return { accessToken: TokenService.generateAccessToken(payload), refreshToken: TokenService.generateRefreshToken(payload) };
+
+        const newAccessToken = TokenService.generateAccessToken(payload);
+        const newRefreshToken = TokenService.generateRefreshToken(payload);
+
+        return { accessToken: newAccessToken, refreshToken: newRefreshToken };
     },
 
     async logout(refreshToken: string) {
@@ -89,17 +125,23 @@ export const AuthService = {
             const decoded = TokenService.verifyRefreshToken(refreshToken) as { exp?: number };
             const exp = decoded.exp ? new Date(decoded.exp * 1000) : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
             await TokenService.denylistToken(refreshToken, exp);
-        } catch { /* Already expired — logout anyway */ }
+        } catch {
+            // Already expired or invalid — logout anyway
+        }
     },
 
     async getProfile(userId: string) {
         const result = await db.query(`
       SELECT u.id, u.full_name, u.university_id, u.email, u.role,
              u.department_id, d.name as department_name, u.created_at, u.last_login
-      FROM users u LEFT JOIN departments d ON d.id = u.department_id
+      FROM users u
+      LEFT JOIN departments d ON d.id = u.department_id
       WHERE u.id = $1 AND u.is_active = true
     `, [userId]);
-        if (!result.rows[0]) throw AppError.notFound('User not found');
+
+        if (!result.rows[0]) {
+            throw AppError.notFound('User not found');
+        }
         return result.rows[0];
     },
 
@@ -107,8 +149,12 @@ export const AuthService = {
         const result = await db.query<User>(`SELECT password_hash FROM users WHERE id = $1`, [userId]);
         const user = result.rows[0];
         if (!user) throw AppError.notFound('User not found');
+
         const match = await bcrypt.compare(currentPassword, user.password_hash);
-        if (!match) throw AppError.badRequest('Current password is incorrect', 'WRONG_PASSWORD');
+        if (!match) {
+            throw AppError.badRequest('Current password is incorrect', 'WRONG_PASSWORD');
+        }
+
         const newHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
         await db.query(`UPDATE users SET password_hash = $1 WHERE id = $2`, [newHash, userId]);
     },

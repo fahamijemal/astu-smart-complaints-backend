@@ -8,12 +8,9 @@ export function validate(schema: ZodSchema, source: 'body' | 'query' | 'params' 
             const parsed = schema.parse(req[source]);
             req[source] = parsed;
             return next();
-        } catch (err: any) {
-            if (err instanceof ZodError || err?.issues) {
-                const details = err.issues ? err.issues.map((e: any) => ({
-                    field: e.path.join('.'),
-                    message: e.message,
-                })) : err.errors.map((e: any) => ({
+        } catch (err) {
+            if (err instanceof ZodError) {
+                const details = err.errors.map((e) => ({
                     field: e.path.join('.'),
                     message: e.message,
                 }));

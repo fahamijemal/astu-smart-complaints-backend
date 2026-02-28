@@ -16,12 +16,12 @@ export const AdminController = {
     },
 
     async updateRole(req: AuthRequest, res: Response) {
-        const user = await AdminService.updateRole(req.params.id as string, req.body.role);
+        const user = await AdminService.updateRole(req.params.id, req.body.role);
         return sendSuccess(res, user, 'Role updated');
     },
 
     async deactivate(req: AuthRequest, res: Response) {
-        await AdminService.deactivateUser(req.params.id as string);
+        await AdminService.deactivateUser(req.params.id);
         return sendSuccess(res, null, 'Account deactivated');
     },
 
@@ -36,7 +36,7 @@ export const AdminController = {
     },
 
     async updateCategory(req: AuthRequest, res: Response) {
-        const cat = await AdminService.updateCategory(req.params.id as string, req.body);
+        const cat = await AdminService.updateCategory(req.params.id, req.body);
         return sendSuccess(res, cat, 'Category updated');
     },
 

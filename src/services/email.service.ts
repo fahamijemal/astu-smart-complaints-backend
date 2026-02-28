@@ -17,7 +17,7 @@ async function sendWithRetry(options: nodemailer.SendMailOptions, retries = 3): 
         } catch (err) {
             logger.warn(`Email send attempt ${attempt} failed`, { error: err, to: options.to });
             if (attempt === retries) throw err;
-            await new Promise((r) => setTimeout(r, Math.pow(2, attempt) * 1000));
+            await new Promise((r) => setTimeout(r, Math.pow(2, attempt) * 1000)); // exponential backoff
         }
     }
 }

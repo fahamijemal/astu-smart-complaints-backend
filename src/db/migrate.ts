@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS users (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Token denylist
+-- Token denylist (for logout/revoked refresh tokens)
 CREATE TABLE IF NOT EXISTS token_denylist (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   token_hash VARCHAR(512) NOT NULL UNIQUE,
@@ -83,7 +83,7 @@ CREATE TABLE IF NOT EXISTS complaint_attachments (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Complaint history (audit log)
+-- Complaint history (immutable audit log)
 CREATE TABLE IF NOT EXISTS complaint_history (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   complaint_id UUID NOT NULL REFERENCES complaints(id) ON DELETE CASCADE,
