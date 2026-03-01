@@ -124,9 +124,10 @@ async function bootstrap() {
         logger.info('Database connected ✓');
 
         const server = app.listen(env.PORT, () => {
+            const publicBaseUrl = process.env.PUBLIC_API_URL?.replace(/\/$/, '') ?? `http://localhost:${env.PORT}`;
             logger.info(`🚀 ASTU Backend running on port ${env.PORT} [${env.NODE_ENV}]`);
-            logger.info(`📖 API Docs: http://localhost:${env.PORT}/api/docs`);
-            logger.info(`💓 Health: http://localhost:${env.PORT}/api/v1/health`);
+            logger.info(`📖 API Docs: ${publicBaseUrl}/api/docs`);
+            logger.info(`💓 Health: ${publicBaseUrl}/api/v1/health`);
         });
 
         // Graceful shutdown
