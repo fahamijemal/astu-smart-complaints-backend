@@ -25,6 +25,7 @@ export interface User {
     is_active: boolean;
     failed_logins: number;
     locked_until: Date | null;
+    last_login: Date | null;
     created_at: Date;
     updated_at: Date;
 }
@@ -90,6 +91,7 @@ export interface ComplaintFilters extends PaginationQuery {
     status?: ComplaintStatus;
     category_id?: string;
     department_id?: string;
+    search?: string;
     from?: string;
     to?: string;
     sort?: 'created_at' | 'updated_at' | 'status';

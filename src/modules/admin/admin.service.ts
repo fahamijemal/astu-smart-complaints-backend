@@ -63,6 +63,14 @@ export const AdminService = {
         if (!result.rows[0]) throw AppError.notFound('User not found');
     },
 
+    async activateUser(userId: string) {
+        const result = await db.query(
+            `UPDATE users SET is_active = true WHERE id = $1 RETURNING id`,
+            [userId],
+        );
+        if (!result.rows[0]) throw AppError.notFound('User not found');
+    },
+
     async listCategories() {
         const result = await db.query(`
       SELECT c.*, d.name as department_name
@@ -81,12 +89,14 @@ export const AdminService = {
     },
 
     async updateCategory(id: string, data: Partial<{ name: string; description: string; is_active: boolean }>) {
-        const sets = Object.entries(data)
-            .map(([k], i) => `${k} = $${i + 2}`)
-            .join(', ');
+        const ALLOWED_KEYS = new Set(['name', 'description', 'is_active']);
+        const safeEntries = Object.entries(data).filter(([k]) => ALLOWED_KEYS.has(k));
+        if (safeEntries.length === 0) throw AppError.badRequest('No valid fields to update');
+
+        const sets = safeEntries.map(([k], i) => `${k} = $${i + 2}`).join(', ');
         const result = await db.query(
             `UPDATE categories SET ${sets}, updated_at = NOW() WHERE id = $1 RETURNING *`,
-            [id, ...Object.values(data)],
+            [id, ...safeEntries.map(([, v]) => v)],
         );
         if (!result.rows[0]) throw AppError.notFound('Category not found');
         return result.rows[0];

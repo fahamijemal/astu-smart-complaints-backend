@@ -25,6 +25,11 @@ export const AdminController = {
         return sendSuccess(res, null, 'Account deactivated');
     },
 
+    async activate(req: AuthRequest, res: Response) {
+        await AdminService.activateUser(req.params.id);
+        return sendSuccess(res, null, 'Account activated');
+    },
+
     async listCategories(_req: AuthRequest, res: Response) {
         const cats = await AdminService.listCategories();
         return sendSuccess(res, cats);

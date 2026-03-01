@@ -60,13 +60,17 @@ export const AnalyticsService = {
       monthly: `DATE_TRUNC('month', created_at)`,
     }[period];
 
-    const result = await db.query(`
-      SELECT ${groupBy} as period, status, COUNT(*) as count
-      FROM complaints
-      WHERE created_at >= NOW() - INTERVAL '${days} days'
-      GROUP BY ${groupBy}, status
-      ORDER BY period ASC
-    `);
+    // Clamp days to a safe range to prevent abuse; use a parameterized interval.
+    const safeDays = Math.max(1, Math.min(365, Math.floor(days)));
+
+    const result = await db.query(
+      `SELECT ${groupBy} as period, status, COUNT(*) as count
+       FROM complaints
+       WHERE created_at >= NOW() - ($1 * INTERVAL '1 day')
+       GROUP BY ${groupBy}, status
+       ORDER BY period ASC`,
+      [safeDays],
+    );
 
     return result.rows;
   },

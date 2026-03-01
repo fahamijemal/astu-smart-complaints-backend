@@ -12,6 +12,7 @@ import { swaggerSpec } from './config/swagger';
 import { logger } from './utils/logger';
 import { generalRateLimit } from './middleware/rateLimit.middleware';
 import { errorHandler, notFound } from './middleware/error.middleware';
+import { authenticate } from './middleware/auth.middleware';
 // Routes
 import systemRoutes from './modules/system/system.routes';
 import authRoutes from './modules/auth/auth.routes';
@@ -21,8 +22,6 @@ import chatbotRoutes from './modules/chatbot/chatbot.routes';
 import analyticsRoutes from './modules/analytics/analytics.routes';
 import adminRoutes from './modules/admin/admin.routes';
 import { AdminController } from './modules/admin/admin.controller';
-import { authenticate } from './middleware/auth.middleware';
-import { authorize } from './middleware/rbac.middleware';
 
 const app: express.Express = express();
 
@@ -105,11 +104,8 @@ app.use('/api/v1/chatbot', chatbotRoutes);
 app.use('/api/v1/analytics', analyticsRoutes);
 app.use('/api/v1/admin', adminRoutes);
 
-// Category & department routes (accessible to all authenticated, admin manages)
+// Category listing is accessible to all authenticated users (needed for complaint submission)
 app.get('/api/v1/categories', authenticate, AdminController.listCategories);
-app.post('/api/v1/categories', authenticate, authorize('admin'), AdminController.createCategory);
-app.patch('/api/v1/categories/:id', authenticate, authorize('admin'), AdminController.updateCategory);
-app.get('/api/v1/departments', authenticate, authorize('admin'), AdminController.listDepartments);
 
 // ─── 404 & Error handlers ──────────────────────────────────────────────────────
 app.use(notFound);

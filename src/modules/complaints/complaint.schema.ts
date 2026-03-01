@@ -22,6 +22,7 @@ export const complaintFilterSchema = z.object({
     status: z.enum(['open', 'in_progress', 'resolved', 'closed', 'reopened']).optional(),
     category_id: z.string().uuid().optional(),
     department_id: z.string().uuid().optional(),
+    search: z.string().max(200).optional(),
     from: z.string().optional(),
     to: z.string().optional(),
     sort: z.enum(['created_at', 'updated_at', 'status']).default('created_at'),

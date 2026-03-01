@@ -81,7 +81,7 @@ export const ComplaintService = {
     },
 
     async findAll(user: JwtPayload, filters: ComplaintFilters) {
-        const { page = 1, limit = 20, status, category_id, department_id, from, to, sort = 'created_at', order = 'DESC' } = filters;
+        const { page = 1, limit = 20, status, category_id, department_id, search, from, to, sort = 'created_at', order = 'DESC' } = filters;
         const offset = (page - 1) * limit;
 
         const params: unknown[] = [];
@@ -105,6 +105,11 @@ export const ComplaintService = {
         if (status) { params.push(status); conditions.push(`c.status = $${params.length}`); }
         if (category_id) { params.push(category_id); conditions.push(`c.category_id = $${params.length}`); }
         if (department_id && user.role === 'admin') { params.push(department_id); conditions.push(`c.department_id = $${params.length}`); }
+        if (search) {
+            params.push(`%${search}%`);
+            const idx = params.length;
+            conditions.push(`(c.title ILIKE $${idx} OR c.description ILIKE $${idx})`);
+        }
         if (from) { params.push(from); conditions.push(`c.created_at >= $${params.length}`); }
         if (to) { params.push(to); conditions.push(`c.created_at <= $${params.length}`); }
 

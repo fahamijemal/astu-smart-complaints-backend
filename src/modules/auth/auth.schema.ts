@@ -22,6 +22,9 @@ export const changePasswordSchema = z.object({
         .string()
         .min(8)
         .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, 'Password must contain uppercase, lowercase, and a number'),
+}).refine((data) => data.new_password !== data.current_password, {
+    message: 'New password must be different from the current password',
+    path: ['new_password'],
 });
 
 export const refreshSchema = z.object({
