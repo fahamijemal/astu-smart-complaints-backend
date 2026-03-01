@@ -13,6 +13,7 @@ import { logger } from './utils/logger';
 import { generalRateLimit } from './middleware/rateLimit.middleware';
 import { errorHandler, notFound } from './middleware/error.middleware';
 // Routes
+import systemRoutes from './modules/system/system.routes';
 import authRoutes from './modules/auth/auth.routes';
 import complaintRoutes from './modules/complaints/complaint.routes';
 import notificationRoutes from './modules/notifications/notification.routes';
@@ -96,6 +97,7 @@ app.get('/api/v1/health', async (_req, res) => {
 });
 
 // ─── API Routes ────────────────────────────────────────────────────────────────
+app.use('/', systemRoutes);
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/complaints', complaintRoutes);
 app.use('/api/v1/notifications', notificationRoutes);
