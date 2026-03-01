@@ -55,6 +55,7 @@ export const env = {
 
     openai: {
         apiKey: process.env.OPENAI_API_KEY ?? '',
+        baseUrl: process.env.OPENAI_BASE_URL ?? '',
         model: process.env.AI_MODEL ?? 'gpt-4o-mini',
     },
 

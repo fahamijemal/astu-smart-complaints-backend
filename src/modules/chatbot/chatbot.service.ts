@@ -2,7 +2,10 @@ import OpenAI from 'openai';
 import { env } from '../../config/env';
 import { logger } from '../../utils/logger';
 
-const openai = new OpenAI({ apiKey: env.openai.apiKey });
+const openai = new OpenAI({
+    apiKey: env.openai.apiKey,
+    ...(env.openai.baseUrl ? { baseURL: env.openai.baseUrl } : {}),
+});
 
 const SYSTEM_PROMPT = `You are the ASTU Campus Assistant, an AI helper for Adama Science and Technology University.
 Your sole purpose is to assist students with ASTU campus-related issues including:
