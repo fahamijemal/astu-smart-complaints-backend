@@ -1,6 +1,8 @@
 # ASTU Smart Complaint & Issue Tracking System — Backend
 
-A robust REST API built for the **Adama Science and Technology University (ASTU)** campus complaint management system. Students can submit, track, and manage complaints while staff and admin users handle resolution workflows, analytics, and system administration.
+A production-ready REST API for the **Adama Science and Technology University (ASTU)** smart complaint and issue tracking system.
+
+Students can submit and track complaints, staff can manage complaint workflows, and administrators can monitor operations through analytics and management endpoints.
 
 ## Tech Stack
 
@@ -17,6 +19,24 @@ A robust REST API built for the **Adama Science and Technology University (ASTU)
 | Docs | OpenAPI / Swagger UI |
 | Container | Docker & Docker Compose |
 
+---
+
+## API Base URLs
+
+- Local: `http://localhost:5000`
+- Production (Render): `https://astu-smart-complaints-backend.onrender.com`
+
+Versioned API prefix:
+
+- `/api/v1`
+
+Useful routes:
+
+- Root landing route: `/`
+- Health: `/api/v1/health`
+- Swagger UI: `/api/docs`
+- OpenAPI JSON: `/api/docs.json`
+
 ## Features
 
 - **Authentication & Authorization**: Register, login, JWT issuance, refresh token rotation, password change, account lockout
@@ -29,7 +49,30 @@ A robust REST API built for the **Adama Science and Technology University (ASTU)
 - **Analytics Dashboard**: Per-role statistics, department reports, resolution metrics
 - **AI Chatbot**: Campus assistant powered by OpenAI for complaint triage
 - **Admin Panel**: User management, category/department CRUD, role moderation
-- **API Documentation**: Interactive Swagger UI at `/api-docs`
+- **API Documentation**: Interactive Swagger UI at `/api/docs`
+
+---
+
+## Project Structure
+
+```
+src/
+├── config/           # env, DB, Redis, Swagger
+├── db/               # migrations and seed
+├── middleware/       # auth, RBAC, validation, upload, rate limit, errors
+├── modules/
+│   ├── admin/
+│   ├── analytics/
+│   ├── auth/
+│   ├── chatbot/
+│   ├── complaints/
+│   ├── notifications/
+│   └── system/
+├── services/         # token/email
+├── types/
+├── utils/
+└── server.ts
+```
 
 ## Getting Started
 
@@ -59,10 +102,10 @@ cp .env.example .env.local
 
 ```bash
 # Run migrations
-pnpm ts-node src/db/migrate.ts
+pnpm run migrate:dev
 
 # Seed initial data (departments, categories, test users)
-pnpm ts-node src/db/seed.ts
+pnpm run seed
 ```
 
 ### Development
@@ -71,15 +114,44 @@ pnpm ts-node src/db/seed.ts
 pnpm run dev
 ```
 
-Server starts at `http://localhost:5000`. API docs available at `http://localhost:5000/api-docs`.
+Server starts at `http://localhost:5000`.
+
+Open:
+
+- `http://localhost:5000/`
+- `http://localhost:5000/api/v1/health`
+- `http://localhost:5000/api/docs`
 
 ### Docker
 
 ```bash
-docker-compose up -d
+docker compose up -d --build
 ```
 
 This starts the API, PostgreSQL, and Redis containers.
+
+---
+
+## Production Deployment (Render)
+
+Set required environment variables in Render:
+
+- `NODE_ENV=production`
+- `PORT=5000`
+- `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_SSL=true`
+- `REDIS_URL`
+- `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`
+- `FRONTEND_URL`
+- `PUBLIC_API_URL`
+
+Recommended pre-deploy command:
+
+- `pnpm run migrate:dev`
+
+After deploy, verify:
+
+- `/api/v1/health`
+- `/api/docs`
 
 ## Default Credentials (Seed Data)
 
@@ -89,74 +161,95 @@ This starts the API, PostgreSQL, and Redis containers.
 | Staff | it.staff@astu.edu.et | Staff@ASTU2026 |
 | Student | student@astu.edu.et | Student@ASTU2026 |
 
-## API Endpoints
+> Important: Change these credentials immediately in non-demo environments.
+
+---
+
+## API Endpoint Summary
+
+All endpoints below are under `/api/v1`.
 
 ### Auth
 | Method | Endpoint | Description |
 | --- | --- | --- |
-| POST | `/api/auth/register` | Register student account |
-| POST | `/api/auth/login` | Login |
-| POST | `/api/auth/refresh` | Refresh access token |
-| POST | `/api/auth/logout` | Logout (denylist token) |
-| GET | `/api/auth/me` | Get current user profile |
-| PATCH | `/api/auth/change-password` | Change password |
+| POST | `/auth/register` | Register student account |
+| POST | `/auth/login` | Login |
+| POST | `/auth/refresh` | Refresh access token |
+| POST | `/auth/logout` | Logout (denylist token) |
+| GET | `/auth/me` | Get current user profile |
+| PATCH | `/auth/change-password` | Change password |
 
 ### Complaints
 | Method | Endpoint | Description |
 | --- | --- | --- |
-| POST | `/api/complaints` | Submit complaint |
-| GET | `/api/complaints` | List complaints (filtered) |
-| GET | `/api/complaints/:id` | Get complaint details |
-| PATCH | `/api/complaints/:id/status` | Update status |
-| POST | `/api/complaints/:id/remarks` | Add remark |
-| GET | `/api/complaints/:id/history` | Audit log |
-| DELETE | `/api/complaints/:id` | Delete (admin) |
+| POST | `/complaints` | Submit complaint |
+| GET | `/complaints` | List complaints (filtered) |
+| GET | `/complaints/:id` | Get complaint details |
+| PATCH | `/complaints/:id/status` | Update status |
+| POST | `/complaints/:id/remarks` | Add remark |
+| GET | `/complaints/:id/history` | Audit log |
+| DELETE | `/complaints/:id` | Delete (admin) |
 
 ### Notifications
 | Method | Endpoint | Description |
 | --- | --- | --- |
-| GET | `/api/notifications` | Get notifications |
-| PATCH | `/api/notifications/read-all` | Mark all read |
-| PATCH | `/api/notifications/:id/read` | Mark one read |
+| GET | `/notifications` | Get notifications |
+| PATCH | `/notifications/read-all` | Mark all read |
+| PATCH | `/notifications/:id/read` | Mark one read |
 
 ### Analytics
 | Method | Endpoint | Description |
 | --- | --- | --- |
-| GET | `/api/analytics/dashboard` | Dashboard stats |
-| GET | `/api/analytics/report` | System report (admin) |
+| GET | `/analytics/summary` | Dashboard summary |
+| GET | `/analytics/timeseries` | Time-series report |
 
 ### Chatbot
 | Method | Endpoint | Description |
 | --- | --- | --- |
-| POST | `/api/chatbot/message` | Chat with AI assistant |
+| POST | `/chatbot/message` | Chat with AI assistant |
 
 ### Admin
 | Method | Endpoint | Description |
 | --- | --- | --- |
-| GET | `/api/admin/users` | List users |
-| POST | `/api/admin/users` | Create staff account |
-| PATCH | `/api/admin/users/:id/role` | Update user role |
-| PATCH | `/api/admin/users/:id/deactivate` | Deactivate user |
+| GET | `/admin/users` | List users |
+| POST | `/admin/users` | Create staff account |
+| PATCH | `/admin/users/:id/role` | Update user role |
+| PATCH | `/admin/users/:id/deactivate` | Deactivate user |
 
-## Project Structure
+### Categories & Departments
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| GET | `/categories` | List categories |
+| POST | `/categories` | Create category (admin) |
+| PATCH | `/categories/:id` | Update category (admin) |
+| GET | `/departments` | List departments (admin) |
 
+---
+
+## Testing
+
+```bash
+pnpm test
 ```
-src/
-├── config/          # Environment, database, Redis, Swagger config
-├── db/              # Migrations and seed scripts
-├── middleware/       # Auth, RBAC, validation, rate limiting, upload, error handling
-├── modules/
-│   ├── admin/       # Admin service, controller, routes
-│   ├── analytics/   # Dashboard stats and reports
-│   ├── auth/        # Authentication and authorization
-│   ├── chatbot/     # AI chatbot integration
-│   ├── complaints/  # Complaint CRUD and lifecycle
-│   └── notifications/ # In-app notifications
-├── services/        # Email and token services
-├── types/           # TypeScript interfaces
-├── utils/           # Logger, AppError, response helpers
-└── server.ts        # Express app bootstrap
-```
+
+Manual smoke-test examples are available at:
+
+- `docs/api-test-examples.md`
+
+---
+
+## Security Notes
+
+- RBAC is enforced across role-sensitive routes.
+- Validation and rate limiting are active.
+- File uploads are constrained by MIME type and size.
+- Parameterized SQL queries are used to reduce injection risk.
+
+See:
+
+- `docs/security-audit-report.md`
+
+---
 
 ## License
 
