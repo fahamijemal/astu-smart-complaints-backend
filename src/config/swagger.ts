@@ -2,6 +2,18 @@ import swaggerJsdoc from 'swagger-jsdoc';
 
 const apiBasePath = '/api/v1';
 const publicApiUrl = process.env.PUBLIC_API_URL?.replace(/\/$/, '');
+const commonErrorResponses = {
+    '429': { $ref: '#/components/responses/TooManyRequests' },
+    '500': { $ref: '#/components/responses/InternalError' },
+};
+const protectedErrorResponses = {
+    '401': { $ref: '#/components/responses/Unauthorized' },
+    ...commonErrorResponses,
+};
+const adminErrorResponses = {
+    ...protectedErrorResponses,
+    '403': { $ref: '#/components/responses/Forbidden' },
+};
 
 const options: swaggerJsdoc.Options = {
     definition: {
@@ -32,12 +44,19 @@ const options: swaggerJsdoc.Options = {
                 },
             },
             schemas: {
-                Error: {
+                ErrorDetail: {
+                    type: 'object',
+                    properties: {
+                        code: { type: 'string', example: 'VALIDATION_ERROR' },
+                        message: { type: 'string', example: 'Invalid request payload' },
+                        details: { type: 'array', items: { type: 'object' }, nullable: true },
+                    },
+                },
+                ErrorResponse: {
                     type: 'object',
                     properties: {
                         success: { type: 'boolean', example: false },
-                        error: { type: 'string', example: 'VALIDATION_ERROR' },
-                        message: { type: 'string', example: 'Invalid request payload' },
+                        error: { $ref: '#/components/schemas/ErrorDetail' },
                     },
                 },
                 SuccessResponse: {
@@ -72,6 +91,103 @@ const options: swaggerJsdoc.Options = {
                         created_at: { type: 'string', format: 'date-time', example: '2026-02-28T10:15:00.000Z' },
                     },
                 },
+                TokenPair: {
+                    type: 'object',
+                    properties: {
+                        accessToken: { type: 'string', example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.access' },
+                        refreshToken: { type: 'string', example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.refresh' },
+                    },
+                },
+            },
+            responses: {
+                Unauthorized: {
+                    description: 'Authentication required or token invalid',
+                    content: {
+                        'application/json': {
+                            schema: { $ref: '#/components/schemas/ErrorResponse' },
+                            examples: {
+                                unauthorized: {
+                                    value: {
+                                        success: false,
+                                        error: { code: 'UNAUTHORIZED', message: 'Access token is missing or invalid' },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+                Forbidden: {
+                    description: 'Insufficient permission',
+                    content: {
+                        'application/json': {
+                            schema: { $ref: '#/components/schemas/ErrorResponse' },
+                            examples: {
+                                forbidden: {
+                                    value: {
+                                        success: false,
+                                        error: { code: 'FORBIDDEN', message: 'You do not have permission to perform this action' },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+                NotFound: {
+                    description: 'Resource not found',
+                    content: {
+                        'application/json': {
+                            schema: { $ref: '#/components/schemas/ErrorResponse' },
+                        },
+                    },
+                },
+                ValidationError: {
+                    description: 'Invalid request payload or query parameters',
+                    content: {
+                        'application/json': {
+                            schema: { $ref: '#/components/schemas/ErrorResponse' },
+                        },
+                    },
+                },
+                Conflict: {
+                    description: 'Resource conflict',
+                    content: {
+                        'application/json': {
+                            schema: { $ref: '#/components/schemas/ErrorResponse' },
+                        },
+                    },
+                },
+                TooManyRequests: {
+                    description: 'Too many requests. Rate limit exceeded',
+                    content: {
+                        'application/json': {
+                            schema: { $ref: '#/components/schemas/ErrorResponse' },
+                        },
+                    },
+                },
+                InternalError: {
+                    description: 'Unexpected server error',
+                    content: {
+                        'application/json': {
+                            schema: { $ref: '#/components/schemas/ErrorResponse' },
+                            examples: {
+                                internal: {
+                                    value: {
+                                        success: false,
+                                        error: { code: 'INTERNAL_ERROR', message: 'An unexpected server error occurred' },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+                ServiceUnavailable: {
+                    description: 'Service temporarily unavailable',
+                    content: {
+                        'application/json': {
+                            schema: { $ref: '#/components/schemas/ErrorResponse' },
+                        },
+                    },
+                },
             },
         },
         tags: [
@@ -91,10 +207,12 @@ const options: swaggerJsdoc.Options = {
                 get: {
                     tags: ['Health'],
                     summary: 'Health check',
+                    operationId: 'getHealth',
                     security: [],
                     responses: {
                         '200': { description: 'Healthy service' },
-                        '503': { description: 'Service degraded' },
+                        '503': { $ref: '#/components/responses/ServiceUnavailable' },
+                        ...commonErrorResponses,
                     },
                 },
             },
@@ -102,6 +220,7 @@ const options: swaggerJsdoc.Options = {
                 post: {
                     tags: ['Auth'],
                     summary: 'Register a new student account',
+                    operationId: 'register',
                     security: [],
                     requestBody: {
                         required: true,
@@ -121,13 +240,19 @@ const options: swaggerJsdoc.Options = {
                             },
                         },
                     },
-                    responses: { '201': { description: 'Registration successful' } },
+                    responses: {
+                        '201': { description: 'Registration successful' },
+                        '409': { $ref: '#/components/responses/Conflict' },
+                        '422': { $ref: '#/components/responses/ValidationError' },
+                        ...commonErrorResponses,
+                    },
                 },
             },
             '/auth/login': {
                 post: {
                     tags: ['Auth'],
                     summary: 'Login with email and password',
+                    operationId: 'login',
                     security: [],
                     requestBody: {
                         required: true,
@@ -144,13 +269,20 @@ const options: swaggerJsdoc.Options = {
                             },
                         },
                     },
-                    responses: { '200': { description: 'Login successful with tokens' } },
+                    responses: {
+                        '200': { description: 'Login successful with tokens' },
+                        '401': { $ref: '#/components/responses/Unauthorized' },
+                        '423': { description: 'Account temporarily locked' },
+                        '422': { $ref: '#/components/responses/ValidationError' },
+                        ...commonErrorResponses,
+                    },
                 },
             },
             '/auth/refresh': {
                 post: {
                     tags: ['Auth'],
                     summary: 'Refresh access token',
+                    operationId: 'refreshToken',
                     security: [],
                     requestBody: {
                         required: true,
@@ -166,13 +298,19 @@ const options: swaggerJsdoc.Options = {
                             },
                         },
                     },
-                    responses: { '200': { description: 'Token refreshed' } },
+                    responses: {
+                        '200': { description: 'Token refreshed' },
+                        '401': { $ref: '#/components/responses/Unauthorized' },
+                        '422': { $ref: '#/components/responses/ValidationError' },
+                        ...commonErrorResponses,
+                    },
                 },
             },
             '/auth/logout': {
                 post: {
                     tags: ['Auth'],
                     summary: 'Logout user and invalidate refresh token',
+                    operationId: 'logout',
                     requestBody: {
                         required: true,
                         content: {
@@ -187,20 +325,28 @@ const options: swaggerJsdoc.Options = {
                             },
                         },
                     },
-                    responses: { '200': { description: 'Logout successful' } },
+                    responses: {
+                        '200': { description: 'Logout successful' },
+                        ...protectedErrorResponses,
+                    },
                 },
             },
             '/auth/me': {
                 get: {
                     tags: ['Auth'],
                     summary: 'Get current user profile',
-                    responses: { '200': { description: 'User profile' } },
+                    operationId: 'getCurrentUser',
+                    responses: {
+                        '200': { description: 'User profile' },
+                        ...protectedErrorResponses,
+                    },
                 },
             },
             '/auth/change-password': {
                 patch: {
                     tags: ['Auth'],
                     summary: 'Change current user password',
+                    operationId: 'changePassword',
                     requestBody: {
                         required: true,
                         content: {
@@ -216,13 +362,18 @@ const options: swaggerJsdoc.Options = {
                             },
                         },
                     },
-                    responses: { '200': { description: 'Password changed successfully' } },
+                    responses: {
+                        '200': { description: 'Password changed successfully' },
+                        '400': { $ref: '#/components/responses/ValidationError' },
+                        ...protectedErrorResponses,
+                    },
                 },
             },
             '/complaints': {
                 get: {
                     tags: ['Complaints'],
                     summary: 'List complaints with filtering and pagination',
+                    operationId: 'listComplaints',
                     parameters: [
                         { name: 'page', in: 'query', schema: { type: 'integer' } },
                         { name: 'limit', in: 'query', schema: { type: 'integer', example: 20 } },
@@ -234,11 +385,15 @@ const options: swaggerJsdoc.Options = {
                         { name: 'sort', in: 'query', schema: { type: 'string', enum: ['created_at', 'updated_at', 'status'] } },
                         { name: 'order', in: 'query', schema: { type: 'string', enum: ['ASC', 'DESC'] } },
                     ],
-                    responses: { '200': { description: 'Paginated complaint list' } },
+                    responses: {
+                        '200': { description: 'Paginated complaint list' },
+                        ...protectedErrorResponses,
+                    },
                 },
                 post: {
                     tags: ['Complaints'],
                     summary: 'Submit a new complaint',
+                    operationId: 'createComplaint',
                     requestBody: {
                         required: true,
                         content: {
@@ -257,35 +412,56 @@ const options: swaggerJsdoc.Options = {
                             },
                         },
                     },
-                    responses: { '201': { description: 'Complaint created' } },
+                    responses: {
+                        '201': { description: 'Complaint created' },
+                        '400': { $ref: '#/components/responses/ValidationError' },
+                        '403': { $ref: '#/components/responses/Forbidden' },
+                        ...protectedErrorResponses,
+                    },
                 },
             },
             '/complaints/{id}': {
                 get: {
                     tags: ['Complaints'],
                     summary: 'Get complaint details by ID',
+                    operationId: 'getComplaintById',
                     parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
-                    responses: { '200': { description: 'Complaint details' } },
+                    responses: {
+                        '200': { description: 'Complaint details' },
+                        '404': { $ref: '#/components/responses/NotFound' },
+                        ...protectedErrorResponses,
+                    },
                 },
                 delete: {
                     tags: ['Complaints'],
                     summary: 'Delete complaint (admin only)',
+                    operationId: 'deleteComplaint',
                     parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
-                    responses: { '200': { description: 'Complaint deleted' } },
+                    responses: {
+                        '200': { description: 'Complaint deleted' },
+                        '404': { $ref: '#/components/responses/NotFound' },
+                        ...adminErrorResponses,
+                    },
                 },
             },
             '/complaints/{id}/history': {
                 get: {
                     tags: ['Complaints'],
                     summary: 'Get complaint status/history timeline',
+                    operationId: 'getComplaintHistory',
                     parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
-                    responses: { '200': { description: 'Complaint history' } },
+                    responses: {
+                        '200': { description: 'Complaint history' },
+                        '404': { $ref: '#/components/responses/NotFound' },
+                        ...protectedErrorResponses,
+                    },
                 },
             },
             '/complaints/{id}/status': {
                 patch: {
                     tags: ['Complaints'],
                     summary: 'Update complaint status',
+                    operationId: 'updateComplaintStatus',
                     parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
                     requestBody: {
                         required: true,
@@ -302,13 +478,18 @@ const options: swaggerJsdoc.Options = {
                             },
                         },
                     },
-                    responses: { '200': { description: 'Status updated' } },
+                    responses: {
+                        '200': { description: 'Status updated' },
+                        '404': { $ref: '#/components/responses/NotFound' },
+                        ...adminErrorResponses,
+                    },
                 },
             },
             '/complaints/{id}/remarks': {
                 post: {
                     tags: ['Complaints'],
                     summary: 'Add a complaint remark (staff/admin)',
+                    operationId: 'addComplaintRemark',
                     parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
                     requestBody: {
                         required: true,
@@ -324,53 +505,79 @@ const options: swaggerJsdoc.Options = {
                             },
                         },
                     },
-                    responses: { '201': { description: 'Remark added' } },
+                    responses: {
+                        '201': { description: 'Remark added' },
+                        '404': { $ref: '#/components/responses/NotFound' },
+                        ...adminErrorResponses,
+                    },
                 },
             },
             '/notifications': {
                 get: {
                     tags: ['Notifications'],
                     summary: 'Get user notifications',
-                    responses: { '200': { description: 'Notification list with unread count' } },
+                    operationId: 'listNotifications',
+                    responses: {
+                        '200': { description: 'Notification list with unread count' },
+                        ...protectedErrorResponses,
+                    },
                 },
             },
             '/notifications/read-all': {
                 patch: {
                     tags: ['Notifications'],
                     summary: 'Mark all notifications as read',
-                    responses: { '200': { description: 'All notifications marked as read' } },
+                    operationId: 'markAllNotificationsRead',
+                    responses: {
+                        '200': { description: 'All notifications marked as read' },
+                        ...protectedErrorResponses,
+                    },
                 },
             },
             '/notifications/{id}/read': {
                 patch: {
                     tags: ['Notifications'],
                     summary: 'Mark one notification as read',
+                    operationId: 'markNotificationRead',
                     parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
-                    responses: { '200': { description: 'Notification marked as read' } },
+                    responses: {
+                        '200': { description: 'Notification marked as read' },
+                        '404': { $ref: '#/components/responses/NotFound' },
+                        ...protectedErrorResponses,
+                    },
                 },
             },
             '/analytics/summary': {
                 get: {
                     tags: ['Analytics'],
                     summary: 'Get summary analytics',
-                    responses: { '200': { description: 'Dashboard stats by status' } },
+                    operationId: 'getAnalyticsSummary',
+                    responses: {
+                        '200': { description: 'Dashboard stats by status' },
+                        ...adminErrorResponses,
+                    },
                 },
             },
             '/analytics/timeseries': {
                 get: {
                     tags: ['Analytics'],
                     summary: 'Get complaints time series (admin only)',
+                    operationId: 'getAnalyticsTimeSeries',
                     parameters: [
                         { name: 'period', in: 'query', schema: { type: 'string', enum: ['daily', 'weekly', 'monthly'], example: 'daily' } },
                         { name: 'days', in: 'query', schema: { type: 'integer', minimum: 1, example: 30 } },
                     ],
-                    responses: { '200': { description: 'Time series data' } },
+                    responses: {
+                        '200': { description: 'Time series data' },
+                        ...adminErrorResponses,
+                    },
                 },
             },
             '/chatbot/message': {
                 post: {
                     tags: ['Chatbot'],
                     summary: 'Send a message to the AI campus assistant',
+                    operationId: 'sendChatbotMessage',
                     requestBody: {
                         required: true,
                         content: {
@@ -393,18 +600,28 @@ const options: swaggerJsdoc.Options = {
                             },
                         },
                     },
-                    responses: { '200': { description: 'AI reply' } },
+                    responses: {
+                        '200': { description: 'AI reply' },
+                        '400': { $ref: '#/components/responses/ValidationError' },
+                        '503': { $ref: '#/components/responses/ServiceUnavailable' },
+                        ...protectedErrorResponses,
+                    },
                 },
             },
             '/admin/users': {
                 get: {
                     tags: ['Admin'],
                     summary: 'List all users (admin only)',
-                    responses: { '200': { description: 'Paginated user list' } },
+                    operationId: 'listUsers',
+                    responses: {
+                        '200': { description: 'Paginated user list' },
+                        ...adminErrorResponses,
+                    },
                 },
                 post: {
                     tags: ['Admin'],
                     summary: 'Create a staff account (admin only)',
+                    operationId: 'createStaffUser',
                     requestBody: {
                         required: true,
                         content: {
@@ -422,13 +639,19 @@ const options: swaggerJsdoc.Options = {
                             },
                         },
                     },
-                    responses: { '201': { description: 'Staff account created' } },
+                    responses: {
+                        '201': { description: 'Staff account created' },
+                        '409': { $ref: '#/components/responses/Conflict' },
+                        '422': { $ref: '#/components/responses/ValidationError' },
+                        ...adminErrorResponses,
+                    },
                 },
             },
             '/admin/users/{id}/role': {
                 patch: {
                     tags: ['Admin'],
                     summary: 'Update user role (admin only)',
+                    operationId: 'updateUserRole',
                     parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
                     requestBody: {
                         required: true,
@@ -444,26 +667,40 @@ const options: swaggerJsdoc.Options = {
                             },
                         },
                     },
-                    responses: { '200': { description: 'Role updated' } },
+                    responses: {
+                        '200': { description: 'Role updated' },
+                        '404': { $ref: '#/components/responses/NotFound' },
+                        ...adminErrorResponses,
+                    },
                 },
             },
             '/admin/users/{id}/deactivate': {
                 patch: {
                     tags: ['Admin'],
                     summary: 'Deactivate a user account (admin only)',
+                    operationId: 'deactivateUser',
                     parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
-                    responses: { '200': { description: 'Account deactivated' } },
+                    responses: {
+                        '200': { description: 'Account deactivated' },
+                        '404': { $ref: '#/components/responses/NotFound' },
+                        ...adminErrorResponses,
+                    },
                 },
             },
             '/categories': {
                 get: {
                     tags: ['Categories'],
                     summary: 'List categories (authenticated users)',
-                    responses: { '200': { description: 'Category list' } },
+                    operationId: 'listCategories',
+                    responses: {
+                        '200': { description: 'Category list' },
+                        ...protectedErrorResponses,
+                    },
                 },
                 post: {
                     tags: ['Categories'],
                     summary: 'Create category (admin only)',
+                    operationId: 'createCategory',
                     requestBody: {
                         required: true,
                         content: {
@@ -480,13 +717,18 @@ const options: swaggerJsdoc.Options = {
                             },
                         },
                     },
-                    responses: { '201': { description: 'Category created' } },
+                    responses: {
+                        '201': { description: 'Category created' },
+                        '422': { $ref: '#/components/responses/ValidationError' },
+                        ...adminErrorResponses,
+                    },
                 },
             },
             '/categories/{id}': {
                 patch: {
                     tags: ['Categories'],
                     summary: 'Update category (admin only)',
+                    operationId: 'updateCategory',
                     parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
                     requestBody: {
                         required: true,
@@ -503,14 +745,22 @@ const options: swaggerJsdoc.Options = {
                             },
                         },
                     },
-                    responses: { '200': { description: 'Category updated' } },
+                    responses: {
+                        '200': { description: 'Category updated' },
+                        '404': { $ref: '#/components/responses/NotFound' },
+                        ...adminErrorResponses,
+                    },
                 },
             },
             '/departments': {
                 get: {
                     tags: ['Departments'],
                     summary: 'List departments (admin only)',
-                    responses: { '200': { description: 'Department list' } },
+                    operationId: 'listDepartments',
+                    responses: {
+                        '200': { description: 'Department list' },
+                        ...adminErrorResponses,
+                    },
                 },
             },
         },
