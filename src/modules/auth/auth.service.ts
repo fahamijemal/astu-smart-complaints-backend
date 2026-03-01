@@ -3,7 +3,7 @@ import { db } from '../../config/database';
 import { TokenService } from '../../services/token.service';
 import { EmailService } from '../../services/email.service';
 import { AppError } from '../../utils/AppError';
-import { User } from '../../types';
+import { JwtPayload, User } from '../../types';
 
 const BCRYPT_ROUNDS = 12;
 const MAX_FAILED_LOGINS = 5;
@@ -106,16 +106,30 @@ export const AuthService = {
             throw AppError.unauthorized('Token has been revoked', 'TOKEN_REVOKED');
         }
 
-        const payload = TokenService.verifyRefreshToken(token);
+        const payload = TokenService.verifyRefreshToken(token) as JwtPayload & {
+            exp?: number;
+            iat?: number;
+            aud?: string;
+            iss?: string;
+            nbf?: number;
+            jti?: string;
+        };
+
+        // Keep only app-specific claims before re-signing to avoid reserved JWT claim conflicts.
+        const sessionPayload: JwtPayload = {
+            userId: payload.userId,
+            role: payload.role,
+            email: payload.email,
+        };
 
         // Rotate: denylist old token, issue new pair
-        const exp = (payload as unknown as { exp?: number }).exp
-            ? new Date((payload as unknown as { exp?: number }).exp! * 1000)
+        const exp = payload.exp
+            ? new Date(payload.exp * 1000)
             : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
         await TokenService.denylistToken(token, exp);
 
-        const newAccessToken = TokenService.generateAccessToken(payload);
-        const newRefreshToken = TokenService.generateRefreshToken(payload);
+        const newAccessToken = TokenService.generateAccessToken(sessionPayload);
+        const newRefreshToken = TokenService.generateRefreshToken(sessionPayload);
 
         return { accessToken: newAccessToken, refreshToken: newRefreshToken };
     },
